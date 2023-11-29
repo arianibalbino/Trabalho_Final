@@ -1,0 +1,214 @@
+---
+title: "Trabalhp final"
+author: "Ariani Assunção Balbino, Hannah Walder Lorenzato Cardoso e Sofia Pereira Campos"
+date: "15 de dezembro de 2023"
+output:
+  pdf_document:
+    fig_caption: yes
+    highlight: tango
+    keep_tex: yes
+  html_document:
+    df_print: paged
+  word_document: default
+header-includes:
+- \usepackage{subcaption}
+- \usepackage{booktabs}
+lang: "pt-BR"
+---
+  
+```{r setup,results='hide',warning=FALSE, echo=TRUE, message= FALSE}
+# A few initial definitions just to make sure all required packages are installed. Change as needed.
+# NOTE: It may echo some weird messages to the PDF on the first compile (package installation messages). Run twice and the problem will (hopefully) go away.
+if (!require(ggplot2, quietly = TRUE)){
+  install.packages("ggplot2")
+}
+if (!require(devtools, quietly = TRUE)){
+  install.packages("devtools")
+}
+if (!require(broom, quietly = TRUE)){
+  devtools::install_github("dgrtwo/broom")
+}
+if (!require(GGally, quietly = TRUE)){
+  install.packages("GGally")
+}
+library(xtable)
+```
+
+```{r definir diretório padrão, echo=FALSE}
+
+# Definir o diretório raiz para o local onde o script está localizado
+knitr::opts_knit$set(root.dir = "C:/Users/Ariani/Downloads/ec03_ufmg-main")
+```
+
+## 0. Papéis Desempenhados  
+Ariani Assunção Balbino - Desenvolvedor,Relator, Verificador 
+---
+  Hannah Walder Lorenzato Cardoso - Relator, Verificador 
+---
+  Sofia Pereira Campos - Desenvolvedor, Relator, Verificador 
+---
+  
+  
+## 1. Resumo
+
+
+
+
+## 2. Planejamento do Experimento
+
+Planejar um experimento é crucial para garantir a validade e a confiabilidade dos resultados. Primeiramente, é preciso definir de forma clara o objetivo do experimento, identificando a hipótese a serem testadas e as variáveis que serão manipuladas e medidas. Em seguida,  deve ser desenvolvido um design experimental, decidindo sobre o tipo de experimento (por exemplo, controlado, quase-experimental), a seleção dos participantes e a alocação das condições experimentais. A estrutura do experimento deve incluir procedimentos claros, instrumentos de coleta de dados e uma análise estatística apropriada para interpretar os resultados de forma robusta.
+
+Ao planejar o experimento, é essencial considerar e controlar possíveis fontes de viés e confusão, garantindo que o ambiente experimental seja controlado e padronizado. Além disso, deve-se estimar o tamanho da amostra necessário para detectar diferenças significativas, levando em conta a variabilidade esperada dos dados. Por fim, é fundamental antecipar potenciais desafios e contingências para mitigar riscos e garantir a qualidade e a validade dos dados coletados durante o experimento.
+
+
+Para este trabalho
+
+
+### 2.1. Objetivo do experimento
+
+
+O principal objetivo deste estudo é investigar e comparar o desempenho médio de 
+
+Hipótese Nula (H0):
+Não há diferença significativa no desempenho médio entre a Configuração A e a Configuração B para a classe de problemas de otimização.
+
+Hipótese Alternativa (H1):
+Há diferença significativa no desempenho médio entre a Configuração A e a Configuração B para a classe de problemas de otimização.
+
+### 2.2 Descrição da coleta do dados
+
+
+
+
+## 3 Análise Exploratória dos Dados
+
+
+
+```{r Análise_dados , echo=TRUE,  message=FALSE, results='asis'}
+library(confintr) # package for confidence intervals
+library(ggplot2)
+library(car) # <--- Install if needed with install.packages("car")
+library(lmtest)
+library(multcomp)
+library(knitr)
+library(stringr)
+
+
+#===================
+####
+# Load data
+####
+
+data <- read.table("C:/Users/Ariani/Downloads/ec03_ufmg-main/dados_final.csv",
+                   header = TRUE)
+
+invisible(summary(data))
+
+# Gere a tabela com kable
+tabelalatex <- kable(summary(data), format = "latex", caption = "\\label{tab:summary_data} 
+                     Resumo dos dados", escape = FALSE)
+
+# Aggregate data (algorithm means by instance group)
+aggdata <- with(data,
+                aggregate(x   = Resultado,
+                          by  = list(Configuração, Dimensão),
+                          FUN = mean))
+
+# Rename columns
+names(aggdata) <- c("Configuração", 
+                    "Dimensão",
+                    "Y")
+
+# Coerce categorical variables to factors
+for (i in 1:2){
+  aggdata[, i] <- as.factor(aggdata[, i])
+}
+
+invisible(summary(aggdata))
+
+# Gere a tabela com kable
+tabelalatex2 <- kable(summary(aggdata), format = "latex", caption = "\\label{tab:summary_data_agg} 
+                     Resumo dos dados agregados", escape = FALSE)
+
+```
+
+
+
+```{r explor, echo=TRUE, message=FALSE, results='asis'}
+####
+## Exploratory data analysis: plot observations by Configuration and Dependency.
+####
+
+# png(filename = "../figs/algo_lineplot.png",
+#     width = 1000, height = 400, 
+#     bg = "transparent")
+p <- ggplot(aggdata, aes(x = Dimensão, 
+                         y = Y, 
+                         group = Configuração, 
+                         colour = Configuração))
+p + geom_line(linetype=2) + geom_point(size=5)
+```
+
+
+
+## 4 Análise Estatística
+
+```{r Análise_estatistica_dados , echo=TRUE,  message=FALSE, results='asis'}
+####
+## Statistical modeling
+####
+
+# First model
+# Response is result of the overall mean plus configuration effect (treatment)
+# and dependency (block) effect
+
+model <- aov(Y~Configuração+Dimensão,
+             data = aggdata)
+
+invisible(summary(model))
+
+# Crie a tabela LaTeX
+tabela_latex3 <- xtable(summary(model))
+
+# Gere a tabela com kable
+tabelalatex3 <- kable(tabela_latex3, format = "latex", caption = "\\label{tab:summary_model_agg} 
+                     Estatísticas do teste ANOVA para o modelo", escape = FALSE)
+```
+
+```{r tabela3, echo=TRUE, message=FALSE, results='asis'}
+cat(tabelalatex3)
+```
+
+```{r Análise_estatistica_dados2 , echo=TRUE,  message=FALSE, results='asis'}
+################################################################################
+# Try log-transformed data
+
+model2 <- aov(log(Y)~Configuração+Dimensão,
+              data = aggdata)
+invisible(summary(model2))
+
+# Crie a tabela LaTeX
+tabela_latex4 <- xtable(summary(model2))
+
+# Gere a tabela com kable
+tabelalatex4 <- kable(tabela_latex4, format = "latex", caption = "\\label{tab:summary_model_agg} 
+                     Estatísticas do teste ANOVA para o modelo em escala logarítimica", escape = FALSE)
+```
+
+
+### 4.1 Análise dos resultados e recomendações
+
+Considerando essas análise
+
+
+
+## 5. Conclusões
+
+
+## 6. Referências
+
+[1] Estrada, J. L. (2000). The behavior of stock returns in the Spanish stock market. Journal of Empirical Finance, 7(3-4), 335-364.
+---
+[2] Keselman, H. J. (2003). An Introduction to the Analysis of Variance. Learning Matters..
+
+---
